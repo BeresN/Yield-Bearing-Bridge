@@ -1,7 +1,6 @@
 # Compiler files
 cache/
 out/
-.claude/
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/
