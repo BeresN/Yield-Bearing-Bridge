@@ -1,51 +1,62 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.33;
+pragma solidity ^0.8.30;
 
-import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ERC4626} from "solmate/tokens/ERC4626.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-/// @title MockERC4626
-/// @notice A mock ERC4626 vault for testnet yield simulation
-/// @dev Includes simulateYield() to programmatically increase share price for demos
+/**
+ * @title MockERC4626
+ * @notice Mock ERC-4626 vault for testnet yield simulation
+ * @dev Includes simulateYield() to programmatically increase share price for demos
+ */
 contract MockERC4626 is ERC4626 {
-    using SafeERC20 for IERC20;
-    using Math for uint256;
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error OnlyOwner();
+    error ZeroYieldAmount();
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event YieldSimulated(uint256 amount, uint256 newTotalAssets);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
     uint256 public simulatedYield;
     address public owner;
 
-    error OnlyOwner();
-    error ZeroYieldAmount();
-    event YieldSimulated(uint256 amount, uint256 newTotalAssets);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert OnlyOwner();
         _;
     }
 
-    constructor(IERC20 asset_, string memory name_, string memory symbol_) ERC4626(asset_) ERC20(name_, symbol_) {
+    /*//////////////////////////////////////////////////////////////
+                              CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor(ERC20 asset_, string memory name_, string memory symbol_) ERC4626(asset_, name_, symbol_) {
         owner = msg.sender;
     }
 
+    /*//////////////////////////////////////////////////////////////
+                          YIELD SIMULATION
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice Simulates yield accrual by increasing the vault's perceived assets
-    /// @dev This artificially increases the share price for testing purposes
-    /// @param amount The amount of yield to simulate (in asset terms)
     function simulateYield(uint256 amount) external onlyOwner {
         if (amount == 0) revert ZeroYieldAmount();
-
         simulatedYield += amount;
-
         emit YieldSimulated(amount, totalAssets());
-    }
-
-    function transferOwnership(address newOwner) external onlyOwner {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
     }
 
     /// @notice Resets the simulated yield to zero
@@ -54,30 +65,40 @@ contract MockERC4626 is ERC4626 {
         emit YieldSimulated(0, totalAssets());
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              OWNERSHIP
+    //////////////////////////////////////////////////////////////*/
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            ERC4626 OVERRIDES
+    //////////////////////////////////////////////////////////////*/
+
     function totalAssets() public view override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)) + simulatedYield;
+        return asset.balanceOf(address(this)) + simulatedYield;
     }
 
-    /// @notice Returns decimals matching the underlying asset
-    function decimals() public view override returns (uint8) {
-        return ERC4626.decimals();
-    }
+    /*//////////////////////////////////////////////////////////////
+                            VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the current share price in asset terms
-    /// @dev Useful for tracking yield simulation effects
+    /// @notice Returns the current share price in asset terms (1e18 = 1:1)
     function sharePrice() external view returns (uint256) {
-        uint256 supply = totalSupply();
+        uint256 supply = totalSupply;
         if (supply == 0) {
-            return 10 ** decimals();
+            return 10 ** decimals;
         }
-        return totalAssets().mulDiv(10 ** decimals(), supply);
+        return (totalAssets() * 10 ** decimals) / supply;
     }
 
-    /// @notice Returns the current yield rate as basis points
-    /// @dev (simulatedYield * 10000) / (totalAssets - simulatedYield)
-    /// @return The yield rate in basis points (100 = 1%)
+    /// @notice Returns the current yield rate in basis points (100 = 1%)
     function currentYieldBps() external view returns (uint256) {
-        uint256 realAssets = IERC20(asset()).balanceOf(address(this));
+        uint256 realAssets = asset.balanceOf(address(this));
         if (realAssets == 0) return 0;
         return (simulatedYield * 10000) / realAssets;
     }
