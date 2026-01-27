@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {BridgeTypes} from "./BridgeTypes.sol";
 
 /**
  * @title SignatureUtils
  * @notice EIP-712 signature utilities for cross-chain bridge message verification
- * @dev Provides domain separator construction, struct hashing, and signature recovery
+ * @dev Uses OpenZeppelin's ECDSA library for signature recovery with built-in malleability protection
  */
 library SignatureUtils {
     /*//////////////////////////////////////////////////////////////
@@ -23,7 +25,6 @@ library SignatureUtils {
                            DOMAIN SEPARATOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Computes the EIP-712 domain separator for a given contract address
     function computeDomainSeparator(address verifyingContract) internal view returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -40,7 +41,6 @@ library SignatureUtils {
                             STRUCT HASHING
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Computes the EIP-712 struct hash for a BridgeMessage
     function hashBridgeMessage(BridgeTypes.BridgeMessage memory message) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -61,59 +61,33 @@ library SignatureUtils {
                           DIGEST COMPUTATION
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Computes the final EIP-712 digest to be signed
     function getTypedDataHash(bytes32 domainSeparator, BridgeTypes.BridgeMessage memory message)
         internal
         pure
         returns (bytes32)
     {
-        bytes1 prefix = bytes1(0x19);
-        bytes1 eip712Version = bytes1(0x01); // EIP-712 is version 1 of EIP-191
-        return keccak256(abi.encodePacked(prefix, eip712Version, domainSeparator, hashBridgeMessage(message)));
+        return MessageHashUtils.toTypedDataHash(domainSeparator, hashBridgeMessage(message));
     }
 
     /*//////////////////////////////////////////////////////////////
                          SIGNATURE RECOVERY
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Recovers signer address from signature components (v, r, s)
-    function recoverSigner(bytes32 digest, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
-        address signer = ecrecover(digest, v, r, s);
-        if (signer == address(0)) {
-            revert BridgeTypes.InvalidSignature();
-        }
-        return signer;
-    }
-
-    /// @dev Recovers signer from packed signature bytes (65 bytes: r + s + v)
+    /// @dev Recovers signer using OpenZeppelin ECDSA (includes malleability protection)
     function recoverSigner(bytes32 digest, bytes memory signature) internal pure returns (address) {
-        if (signature.length != 65) {
+        (address signer, ECDSA.RecoverError error,) = ECDSA.tryRecover(digest, signature);
+
+        if (error != ECDSA.RecoverError.NoError) {
             revert BridgeTypes.InvalidSignature();
         }
 
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-
-        // EIP-2 compatibility
-        if (v < 27) {
-            v += 27;
-        }
-
-        return recoverSigner(digest, v, r, s);
+        return signer;
     }
 
     /*//////////////////////////////////////////////////////////////
                             VERIFICATION
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Verifies that a message was signed by the expected signer
     function verify(
         bytes32 domainSeparator,
         BridgeTypes.BridgeMessage memory message,
@@ -125,7 +99,6 @@ library SignatureUtils {
         return recoveredSigner == expectedSigner;
     }
 
-    /// @dev Verifies signature and reverts if invalid or signer mismatch
     function verifyOrRevert(
         bytes32 domainSeparator,
         BridgeTypes.BridgeMessage memory message,
@@ -137,7 +110,6 @@ library SignatureUtils {
         }
     }
 
-    /// @dev Checks if signature deadline has passed
     function checkDeadline(uint256 deadline) internal view {
         if (block.timestamp > deadline) {
             revert BridgeTypes.SignatureExpired(deadline, block.timestamp);
