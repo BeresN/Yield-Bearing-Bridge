@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.33;
 
 import {ERC4626} from "solmate/tokens/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
@@ -39,14 +39,14 @@ abstract contract VaultAdapter {
     function _depositToVault(uint256 assets) internal returns (uint256 shares) {
         depositToken.safeApprove(address(vault), assets);
         shares = vault.deposit(assets, address(this));
-        
+
         if (shares == 0) revert BridgeTypes.VaultDepositFailed();
     }
 
     /// @dev Redeems shares from vault and returns assets received
     function _redeemFromVault(uint256 shares, address receiver) internal returns (uint256 assets) {
         assets = vault.redeem(shares, receiver, address(this));
-        
+
         if (assets == 0) revert BridgeTypes.VaultWithdrawFailed();
     }
 

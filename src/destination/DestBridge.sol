@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.33;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -28,22 +28,13 @@ contract DestBridge is Ownable, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     event RelayerUpdated(address indexed oldRelayer, address indexed newRelayer);
-    event TokensMinted(
-        address indexed recipient,
-        uint256 amount,
-        uint256 indexed nonce,
-        uint256 sourceChainId
-    );
+    event TokensMinted(address indexed recipient, uint256 amount, uint256 indexed nonce, uint256 sourceChainId);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(
-        address token_,
-        address relayer_,
-        address owner_
-    ) Ownable(owner_) {
+    constructor(address token_, address relayer_, address owner_) Ownable(owner_) {
         if (token_ == address(0)) revert BridgeTypes.ZeroAddress();
         if (relayer_ == address(0)) revert BridgeTypes.ZeroAddress();
 
@@ -57,10 +48,7 @@ contract DestBridge is Ownable, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Mints bridged tokens after verifying relayer signature
-    function mint(
-        BridgeTypes.BridgeMessage calldata message,
-        bytes calldata signature
-    ) external whenNotPaused {
+    function mint(BridgeTypes.BridgeMessage calldata message, bytes calldata signature) external whenNotPaused {
         // Validate chain ID
         if (message.destinationChainId != block.chainid) {
             revert BridgeTypes.InvalidChainId(block.chainid, message.destinationChainId);
@@ -83,19 +71,9 @@ contract DestBridge is Ownable, Pausable {
         // Mint tokens to recipient
         token.mint(message.recipient, message.amount);
 
-        emit TokensMinted(
-            message.recipient,
-            message.amount,
-            message.nonce,
-            message.sourceChainId
-        );
+        emit TokensMinted(message.recipient, message.amount, message.nonce, message.sourceChainId);
 
-        emit BridgeTypes.Minted(
-            message.recipient,
-            message.amount,
-            message.nonce,
-            message.sourceChainId
-        );
+        emit BridgeTypes.Minted(message.recipient, message.amount, message.nonce, message.sourceChainId);
     }
 
     /*//////////////////////////////////////////////////////////////
