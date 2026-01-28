@@ -27,14 +27,19 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address vault_, address owner_) VaultAdapter(vault_) Ownable(owner_) {}
+    constructor(
+        address vault_,
+        address owner_
+    ) VaultAdapter(vault_) Ownable(owner_) {}
 
     /*//////////////////////////////////////////////////////////////
                           DEPOSIT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Deposits tokens to bridge and routes to vault
-    function deposit(BridgeTypes.DepositParams calldata params) external whenNotPaused returns (uint256 nonce) {
+    function deposit(
+        BridgeTypes.DepositParams calldata params
+    ) external whenNotPaused returns (uint256 nonce) {
         if (params.recipient == address(0)) revert BridgeTypes.ZeroAddress();
         if (params.amount == 0) revert BridgeTypes.ZeroAmount();
 
@@ -59,7 +64,12 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
         });
 
         emit BridgeTypes.Deposited(
-            msg.sender, params.recipient, params.amount, shares, nonce, params.destinationChainId
+            msg.sender,
+            params.recipient,
+            params.amount,
+            shares,
+            nonce,
+            params.destinationChainId
         );
     }
 
@@ -100,7 +110,9 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets deposit details by nonce
-    function getDeposit(uint256 nonce) external view returns (BridgeTypes.DepositRecord memory) {
+    function getDeposit(
+        uint256 nonce
+    ) external view returns (BridgeTypes.DepositRecord memory) {
         return deposits[nonce];
     }
 

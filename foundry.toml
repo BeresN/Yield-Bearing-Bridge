@@ -2,8 +2,14 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+evm_version = "cancun"
+auto_detect_solc = false
+solc_version = "0.8.33"
 
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "solmate/=lib/solmate/src/",
 ]
+
+# Ignore nested foundry.toml files from dependencies
+ignore = ["lib/**/foundry.toml"]
