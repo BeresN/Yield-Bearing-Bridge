@@ -195,9 +195,9 @@ contract BridgeBankTest is Test {
 
         uint256 userBalanceBefore = usdc.balanceOf(USER);
 
-        // Owner refunds
+        // Owner refunds (minAmount = 0 for no slippage protection)
         vm.prank(OWNER);
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
 
         assertEq(usdc.balanceOf(USER), userBalanceBefore + DEPOSIT_AMOUNT);
 
@@ -227,9 +227,9 @@ contract BridgeBankTest is Test {
 
         uint256 userBalanceBefore = usdc.balanceOf(USER);
 
-        // Owner refunds - should include yield
+        // Owner refunds - should include yield (minAmount = 0 for no slippage protection)
         vm.prank(OWNER);
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
 
         // User should receive more than original deposit due to yield
         assertGt(usdc.balanceOf(USER), userBalanceBefore + DEPOSIT_AMOUNT);
@@ -250,7 +250,7 @@ contract BridgeBankTest is Test {
         // Non-owner tries to refund
         vm.prank(USER);
         vm.expectRevert();
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
     }
 
     function test_RevertWhen_RefundAlreadyCompleted() public {
@@ -274,7 +274,7 @@ contract BridgeBankTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
         );
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
     }
 
     function test_RevertWhen_RefundAlreadyRefunded() public {
@@ -291,14 +291,33 @@ contract BridgeBankTest is Test {
 
         // First refund
         vm.prank(OWNER);
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
 
         // Try to refund again
         vm.prank(OWNER);
         vm.expectRevert(
             abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
         );
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
+    }
+
+    function test_RevertWhen_SlippageTooHigh() public {
+        // First deposit
+        vm.startPrank(USER);
+        usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
+        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
+            recipient: RECIPIENT,
+            amount: DEPOSIT_AMOUNT,
+            destinationChainId: DESTINATION_CHAIN_ID
+        });
+        uint256 nonce = bridgeBank.deposit(params);
+        vm.stopPrank();
+
+        // Try to refund with minAmount higher than actual returned amount
+        // Since vault returns 1:1, minAmount > DEPOSIT_AMOUNT should fail
+        vm.prank(OWNER);
+        vm.expectRevert(BridgeBank.SlipageTooHigh.selector);
+        bridgeBank.refund(nonce, DEPOSIT_AMOUNT + 1);
     }
 
     /*//////////////////////////////////////////////////////////////

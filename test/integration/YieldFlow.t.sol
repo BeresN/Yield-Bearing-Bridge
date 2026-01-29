@@ -227,9 +227,9 @@ contract YieldFlowTest is Test {
 
         uint256 userBalanceBefore = usdc.balanceOf(USER);
 
-        // Refund
+        // Refund (minAmount = 0 for no slippage protection)
         vm.prank(OWNER);
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
 
         uint256 userBalanceAfter = usdc.balanceOf(USER);
         uint256 refundedAmount = userBalanceAfter - userBalanceBefore;
@@ -315,7 +315,7 @@ contract YieldFlowTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
         );
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
     }
 
     function test_CannotMintTwice() public {

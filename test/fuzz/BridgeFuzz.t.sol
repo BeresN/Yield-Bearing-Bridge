@@ -284,9 +284,9 @@ contract BridgeFuzzTest is Test {
         uint256 expectedValue = bridgeBank.getDepositValue(nonce);
         uint256 userBalanceBefore = usdc.balanceOf(USER);
 
-        // Refund
+        // Refund (minAmount = 0 for no slippage protection)
         vm.prank(OWNER);
-        bridgeBank.refund(nonce);
+        bridgeBank.refund(nonce, 0);
 
         uint256 userBalanceAfter = usdc.balanceOf(USER);
         uint256 refundedAmount = userBalanceAfter - userBalanceBefore;
