@@ -5,6 +5,7 @@ libs = ["lib"]
 evm_version = "cancun"
 auto_detect_solc = false
 solc_version = "0.8.33"
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
@@ -13,3 +14,13 @@ remappings = [
 
 # Ignore nested foundry.toml files from dependencies
 ignore = ["lib/**/foundry.toml"]
+
+# RPC endpoints (loaded from .env)
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+arbitrum_sepolia = "${ARB_SEPOLIA_RPC_URL}"
+
+# Etherscan verification
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
+arbitrum_sepolia = { key = "${ARBISCAN_API_KEY}", url = "https://api-sepolia.arbiscan.io/api" }
