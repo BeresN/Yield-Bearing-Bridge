@@ -8,9 +8,7 @@ import {BridgeBank} from "../src/source/BridgeBank.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /**
- * @title DeploySource
  * @notice Deploys source chain contracts to Sepolia testnet
- * @dev Run with: forge script script/DeploySource.s.sol:DeploySource --rpc-url $SEPOLIA_RPC_URL --account <name> --broadcast --verify
  */
 contract DeploySource is Script {
     function run() external {

@@ -6,13 +6,10 @@ import {BridgedToken} from "../src/destination/BridgedToken.sol";
 import {DestBridge} from "../src/destination/DestBridge.sol";
 
 /**
- * @title DeployDest
  * @notice Deploys destination chain contracts to Arbitrum Sepolia testnet
- * @dev Run with: forge script script/DeployDest.s.sol:DeployDest --rpc-url $ARB_SEPOLIA_RPC_URL --account <name> --broadcast --verify
  */
 contract DeployDest is Script {
     function run() external {
-        // Get deployer address from the account provided via --account flag
         address deployer = msg.sender;
 
         // The relayer address - this is the account that will sign bridge messages
