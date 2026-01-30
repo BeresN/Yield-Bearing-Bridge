@@ -10,18 +10,18 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 /**
  * @title DeploySource
  * @notice Deploys source chain contracts to Sepolia testnet
- * @dev Run with: forge script script/DeploySource.s.sol:DeploySource --rpc-url $SEPOLIA_RPC_URL --broadcast --verify
+ * @dev Run with: forge script script/DeploySource.s.sol:DeploySource --rpc-url $SEPOLIA_RPC_URL --account <name> --broadcast --verify
  */
 contract DeploySource is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        // Get deployer address from the account provided via --account flag
+        address deployer = msg.sender;
 
         console.log("Deploying Source Chain contracts...");
         console.log("Deployer:", deployer);
         console.log("Chain ID:", block.chainid);
 
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // 1. Deploy Mock USDC
         MockERC20 usdc = new MockERC20("Mock USDC", "USDC");

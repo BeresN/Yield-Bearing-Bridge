@@ -1,0 +1,7 @@
+{
+  "chainId": 11155111,
+  "usdc": "0xbCC62f7fea71131F73088b85c08Bf2deCc524957",
+  "vault": "0xF88C2fE22fB1cF99E479d9C1db7086d64d0A1F39",
+  "bridgeBank": "0xaC89C5d5f47ca3df8EcCb30E49Ab11158e1069bF",
+  "owner": "0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38"
+}

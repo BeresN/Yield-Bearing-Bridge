@@ -8,15 +8,15 @@ import {DestBridge} from "../src/destination/DestBridge.sol";
 /**
  * @title DeployDest
  * @notice Deploys destination chain contracts to Arbitrum Sepolia testnet
- * @dev Run with: forge script script/DeployDest.s.sol:DeployDest --rpc-url $ARB_SEPOLIA_RPC_URL --broadcast --verify
+ * @dev Run with: forge script script/DeployDest.s.sol:DeployDest --rpc-url $ARB_SEPOLIA_RPC_URL --account <name> --broadcast --verify
  */
 contract DeployDest is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        // Get deployer address from the account provided via --account flag
+        address deployer = msg.sender;
 
         // The relayer address - this is the account that will sign bridge messages
-        // For testing, using the same deployer key. In production, use a separate key.
+        // For testing, using the same deployer. In production, use a separate key.
         address relayer = vm.envOr("RELAYER_ADDRESS", deployer);
 
         console.log("Deploying Destination Chain contracts...");
@@ -24,7 +24,7 @@ contract DeployDest is Script {
         console.log("Relayer:", relayer);
         console.log("Chain ID:", block.chainid);
 
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // 1. Deploy BridgedToken (wUSDC)
         BridgedToken bridgedToken = new BridgedToken("Wrapped USDC", "wUSDC");

@@ -1,0 +1,7 @@
+{
+  "chainId": 421614,
+  "bridgedToken": "0xcdF92aBDC44B3ecF57EFB85836A8Ec250D08fBf2",
+  "destBridge": "0x62FdEDCf06049801C1Da19c482b1bb50A6736276",
+  "relayer": "0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38",
+  "owner": "0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38"
+}
