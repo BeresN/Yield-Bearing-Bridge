@@ -4,6 +4,10 @@ import { sepolia, arbitrumSepolia } from "viem/chains";
 // Load environment variables
 dotenvConfig();
 
+// ============================================
+// Environment Helpers
+// ============================================
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -11,6 +15,10 @@ function requireEnv(name: string): string {
   }
   return value;
 }
+
+// ============================================
+// Configuration
+// ============================================
 
 // Relayer configuration (loaded at startup)
 export const config = {
@@ -28,6 +36,10 @@ export const config = {
   sourceChain: sepolia,
   destChain: arbitrumSepolia,
 } as const;
+
+// ============================================
+// Contract Addresses
+// ============================================
 
 // Contract addresses from deployment files
 import sepoliaDeployment from "../../deployments/sepolia.json" with { type: "json" };
@@ -48,13 +60,20 @@ export const contracts = {
   },
 } as const;
 
-// EIP-712 Domain for DestBridge
+// ============================================
+// EIP-712 Domain
+// ============================================
+
 export const eip712Domain = {
   name: "YieldBearingBridge",
   version: "1",
   chainId: BigInt(contracts.destination.chainId),
   verifyingContract: contracts.destination.destBridge,
 } as const;
+
+// ============================================
+// Log Configuration
+// ============================================
 
 console.log("Config loaded:");
 console.log(`  Source Chain: ${config.sourceChain.name} (${contracts.source.chainId})`);
