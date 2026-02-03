@@ -6,24 +6,14 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {BridgeTypes} from "./BridgeTypes.sol";
 
 /**
- * @title SignatureUtils
  * @notice EIP-712 signature utilities for cross-chain bridge message verification
- * @dev Uses OpenZeppelin's ECDSA library for signature recovery with built-in malleability protection
  */
 library SignatureUtils {
-    /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
     bytes32 private constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     string private constant NAME = "YieldBearingBridge";
     string private constant VERSION = "1";
-
-    /*//////////////////////////////////////////////////////////////
-                           DOMAIN SEPARATOR
-    //////////////////////////////////////////////////////////////*/
 
     function computeDomainSeparator(address verifyingContract) internal view returns (bytes32) {
         return keccak256(
@@ -36,10 +26,6 @@ library SignatureUtils {
             )
         );
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            STRUCT HASHING
-    //////////////////////////////////////////////////////////////*/
 
     function hashBridgeMessage(BridgeTypes.BridgeMessage memory message) internal pure returns (bytes32) {
         return keccak256(
@@ -57,10 +43,6 @@ library SignatureUtils {
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          DIGEST COMPUTATION
-    //////////////////////////////////////////////////////////////*/
-
     function getTypedDataHash(bytes32 domainSeparator, BridgeTypes.BridgeMessage memory message)
         internal
         pure
@@ -69,11 +51,6 @@ library SignatureUtils {
         return MessageHashUtils.toTypedDataHash(domainSeparator, hashBridgeMessage(message));
     }
 
-    /*//////////////////////////////////////////////////////////////
-                         SIGNATURE RECOVERY
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Recovers signer using OpenZeppelin ECDSA (includes malleability protection)
     function recoverSigner(bytes32 digest, bytes memory signature) internal pure returns (address) {
         (address signer, ECDSA.RecoverError error,) = ECDSA.tryRecover(digest, signature);
 
@@ -83,10 +60,6 @@ library SignatureUtils {
 
         return signer;
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            VERIFICATION
-    //////////////////////////////////////////////////////////////*/
 
     function verify(
         bytes32 domainSeparator,

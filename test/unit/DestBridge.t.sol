@@ -34,8 +34,11 @@ contract DestBridgeTest is Test {
         // Deploy BridgedToken
         bridgedToken = new BridgedToken("Bridged USDC", "bUSDC");
 
-        // Deploy DestBridge
-        destBridge = new DestBridge(address(bridgedToken), relayer, OWNER);
+        // Deploy DestBridge (no token in constructor)
+        destBridge = new DestBridge(relayer, OWNER);
+
+        // Add source chain (chainId = 1, token = bridgedToken, bridgeContract = mock address)
+        destBridge.addSourceChain(SOURCE_CHAIN_ID, address(bridgedToken), address(0xBEEF));
 
         // Set bridge on token
         bridgedToken.setBridge(address(destBridge));
@@ -58,31 +61,25 @@ contract DestBridgeTest is Test {
                             HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _createMessage(
-        uint256 nonce,
-        uint256 deadline
-    ) internal view returns (BridgeTypes.BridgeMessage memory) {
-        return
-            BridgeTypes.BridgeMessage({
-                depositor: USER,
-                recipient: RECIPIENT,
-                amount: MINT_AMOUNT,
-                shares: MINT_AMOUNT,
-                nonce: nonce,
-                sourceChainId: SOURCE_CHAIN_ID,
-                destinationChainId: block.chainid,
-                deadline: deadline
-            });
+    function _createMessage(uint256 nonce, uint256 deadline) internal view returns (BridgeTypes.BridgeMessage memory) {
+        return BridgeTypes.BridgeMessage({
+            depositor: USER,
+            recipient: RECIPIENT,
+            amount: MINT_AMOUNT,
+            shares: MINT_AMOUNT,
+            nonce: nonce,
+            sourceChainId: SOURCE_CHAIN_ID,
+            destinationChainId: block.chainid,
+            deadline: deadline
+        });
     }
 
-    function _signMessage(
-        BridgeTypes.BridgeMessage memory message,
-        uint256 privateKey
-    ) internal view returns (bytes memory) {
-        bytes32 digest = SignatureUtils.getTypedDataHash(
-            domainSeparator,
-            message
-        );
+    function _signMessage(BridgeTypes.BridgeMessage memory message, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = SignatureUtils.getTypedDataHash(domainSeparator, message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
@@ -92,10 +89,7 @@ contract DestBridgeTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_Mint() public {
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         vm.expectEmit(true, true, true, true);
@@ -109,10 +103,7 @@ contract DestBridgeTest is Test {
 
     function test_MultipleMints() public {
         for (uint256 i = 1; i <= 3; i++) {
-            BridgeTypes.BridgeMessage memory message = _createMessage(
-                i,
-                block.timestamp + 1 hours
-            );
+            BridgeTypes.BridgeMessage memory message = _createMessage(i, block.timestamp + 1 hours);
             bytes memory signature = _signMessage(message, RELAYER_PK);
 
             destBridge.mint(message, signature);
@@ -122,10 +113,7 @@ contract DestBridgeTest is Test {
     }
 
     function test_RevertWhen_InvalidSignature() public {
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
 
         // Sign with wrong key
         uint256 wrongKey = 0x99999;
@@ -137,36 +125,24 @@ contract DestBridgeTest is Test {
 
     function test_RevertWhen_ExpiredDeadline() public {
         // Create message with past deadline
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp - 1
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp - 1);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                BridgeTypes.SignatureExpired.selector,
-                block.timestamp - 1,
-                block.timestamp
-            )
+            abi.encodeWithSelector(BridgeTypes.SignatureExpired.selector, block.timestamp - 1, block.timestamp)
         );
         destBridge.mint(message, signature);
     }
 
     function test_RevertWhen_NonceReused() public {
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         // First mint succeeds
         destBridge.mint(message, signature);
 
         // Second mint with same nonce fails
-        vm.expectRevert(
-            abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, 1));
         destBridge.mint(message, signature);
     }
 
@@ -183,13 +159,7 @@ contract DestBridgeTest is Test {
         });
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BridgeTypes.InvalidChainId.selector,
-                block.chainid,
-                999
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.InvalidChainId.selector, block.chainid, 999));
         destBridge.mint(message, signature);
     }
 
@@ -197,10 +167,7 @@ contract DestBridgeTest is Test {
         vm.prank(OWNER);
         destBridge.pause();
 
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         vm.expectRevert();
@@ -237,10 +204,7 @@ contract DestBridgeTest is Test {
         destBridge.pause();
 
         // Verify paused
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         vm.expectRevert();
@@ -255,10 +219,7 @@ contract DestBridgeTest is Test {
         destBridge.unpause();
 
         // Verify unpaused
-        BridgeTypes.BridgeMessage memory message = _createMessage(
-            1,
-            block.timestamp + 1 hours
-        );
+        BridgeTypes.BridgeMessage memory message = _createMessage(1, block.timestamp + 1 hours);
         bytes memory signature = _signMessage(message, RELAYER_PK);
 
         destBridge.mint(message, signature);
@@ -269,5 +230,87 @@ contract DestBridgeTest is Test {
         vm.prank(USER);
         vm.expectRevert();
         destBridge.pause();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CHAIN REGISTRY TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_AddSourceChain() public {
+        uint256 newChainId = 42161; // Arbitrum mainnet
+        address newToken = address(0x1234);
+        address newBridge = address(0x5678);
+
+        vm.prank(OWNER);
+        destBridge.addSourceChain(newChainId, newToken, newBridge);
+
+        assertTrue(destBridge.isSourceChainSupported(newChainId));
+        assertEq(destBridge.getSourceChainToken(newChainId), newToken);
+    }
+
+    function test_RemoveSourceChain() public {
+        vm.prank(OWNER);
+        destBridge.removeSourceChain(SOURCE_CHAIN_ID);
+
+        assertFalse(destBridge.isSourceChainSupported(SOURCE_CHAIN_ID));
+    }
+
+    function test_RevertWhen_AddSourceChainZeroToken() public {
+        vm.prank(OWNER);
+        vm.expectRevert(BridgeTypes.ZeroAddress.selector);
+        destBridge.addSourceChain(999, address(0), address(0x1234));
+    }
+
+    function test_RevertWhen_AddSourceChainZeroBridge() public {
+        vm.prank(OWNER);
+        vm.expectRevert(BridgeTypes.ZeroAddress.selector);
+        destBridge.addSourceChain(999, address(0x1234), address(0));
+    }
+
+    function test_RevertWhen_AddSourceChainNonOwner() public {
+        vm.prank(USER);
+        vm.expectRevert();
+        destBridge.addSourceChain(999, address(0x1234), address(0x5678));
+    }
+
+    function test_RevertWhen_RemoveSourceChainNonOwner() public {
+        vm.prank(USER);
+        vm.expectRevert();
+        destBridge.removeSourceChain(SOURCE_CHAIN_ID);
+    }
+
+    function test_RevertWhen_RemoveUnsupportedSourceChain() public {
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.SourceChainNotSupported.selector, 999));
+        destBridge.removeSourceChain(999);
+    }
+
+    function test_RevertWhen_MintFromUnsupportedSourceChain() public {
+        // Create message from unsupported source chain
+        BridgeTypes.BridgeMessage memory message = BridgeTypes.BridgeMessage({
+            depositor: USER,
+            recipient: RECIPIENT,
+            amount: MINT_AMOUNT,
+            shares: MINT_AMOUNT,
+            nonce: 1,
+            sourceChainId: 999, // Unsupported chain
+            destinationChainId: block.chainid,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory signature = _signMessage(message, RELAYER_PK);
+
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.SourceChainNotSupported.selector, 999));
+        destBridge.mint(message, signature);
+    }
+
+    function test_IsSourceChainSupported() public view {
+        assertTrue(destBridge.isSourceChainSupported(SOURCE_CHAIN_ID));
+        assertFalse(destBridge.isSourceChainSupported(999));
+    }
+
+    function test_GetSourceChainToken() public view {
+        assertEq(destBridge.getSourceChainToken(SOURCE_CHAIN_ID), address(bridgedToken));
+        assertEq(destBridge.getSourceChainToken(999), address(0));
     }
 }

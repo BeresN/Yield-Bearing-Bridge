@@ -2,16 +2,11 @@
 pragma solidity 0.8.33;
 
 /**
- * @title BridgeTypes
  * @notice Shared data structures and types for cross-chain bridge operations
  * @dev Defines structs, enums, errors, and events used by both source chain
  *      (BridgeBank) and destination chain (DestBridge) contracts.
  */
 library BridgeTypes {
-    /*//////////////////////////////////////////////////////////////
-                                 ERRORS
-    //////////////////////////////////////////////////////////////*/
-
     error ZeroAddress();
     error ZeroAmount();
     error InvalidSignature();
@@ -22,10 +17,8 @@ library BridgeTypes {
     error VaultDepositFailed();
     error VaultWithdrawFailed();
     error TransferFailed();
-
-    /*//////////////////////////////////////////////////////////////
-                                 ENUMS
-    //////////////////////////////////////////////////////////////*/
+    error ChainNotSupported(uint256 chainId);
+    error SourceChainNotSupported(uint256 chainId);
 
     enum DepositStatus {
         Pending,
@@ -55,7 +48,6 @@ library BridgeTypes {
         DepositStatus status;
     }
 
-    /// @dev This struct is hashed according to EIP-712 for secure cross-chain messaging
     struct BridgeMessage {
         address depositor;
         address recipient;
@@ -71,6 +63,17 @@ library BridgeTypes {
         address owner;
         uint256 amount;
         uint256 sourceChainId;
+    }
+
+    struct ChainConfig {
+        address remoteContract;
+        bool enabled;
+    }
+
+    struct SourceChainConfig {
+        address token;
+        address bridgeContract;
+        bool enabled;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -93,10 +96,6 @@ library BridgeTypes {
     event Released(address indexed recipient, uint256 amount, uint256 shares, uint256 indexed nonce);
 
     event Refunded(address indexed depositor, uint256 amount, uint256 indexed nonce);
-
-    /*//////////////////////////////////////////////////////////////
-                              TYPE HASHES
-    //////////////////////////////////////////////////////////////*/
 
     bytes32 public constant BRIDGE_MESSAGE_TYPEHASH = keccak256(
         "BridgeMessage(address depositor,address recipient,uint256 amount,uint256 shares,uint256 nonce,uint256 sourceChainId,uint256 destinationChainId,uint256 deadline)"

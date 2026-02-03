@@ -40,9 +40,11 @@ contract BridgeFuzzTest is Test {
         usdc = new MockERC20("USD Coin", "USDC");
         vault = new MockERC4626(ERC20(address(usdc)), "Vault USDC", "vUSDC");
         bridgeBank = new BridgeBank(address(vault), OWNER);
+        bridgeBank.addChain(137, address(0xDEAD)); // Add destination chain for deposits
 
         bridgedToken = new BridgedToken("Bridged USDC", "bUSDC");
-        destBridge = new DestBridge(address(bridgedToken), relayer, OWNER);
+        destBridge = new DestBridge(relayer, OWNER);
+        destBridge.addSourceChain(1, address(bridgedToken), address(0xBEEF));
         bridgedToken.setBridge(address(destBridge));
         vm.stopPrank();
 
@@ -64,11 +66,8 @@ contract BridgeFuzzTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), amount);
 
-        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: recipient,
-            amount: amount,
-            destinationChainId: 137
-        });
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: recipient, amount: amount, destinationChainId: 137});
 
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -82,10 +81,7 @@ contract BridgeFuzzTest is Test {
         assertEq(record.recipient, recipient);
     }
 
-    function testFuzz_MultipleDeposits(
-        uint8 numDeposits,
-        uint256 baseAmount
-    ) public {
+    function testFuzz_MultipleDeposits(uint8 numDeposits, uint256 baseAmount) public {
         // Bound inputs
         numDeposits = uint8(bound(numDeposits, 1, 20));
         baseAmount = bound(baseAmount, MIN_DEPOSIT, MAX_DEPOSIT / 20);
@@ -101,33 +97,23 @@ contract BridgeFuzzTest is Test {
             vm.startPrank(USER);
             usdc.approve(address(bridgeBank), amount);
 
-            BridgeTypes.DepositParams memory params = BridgeTypes
-                .DepositParams({
-                    recipient: address(uint160(i + 100)),
-                    amount: amount,
-                    destinationChainId: 137
-                });
+            BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
+                recipient: address(uint160(i + 100)), amount: amount, destinationChainId: 137
+            });
 
             bridgeBank.deposit(params);
             vm.stopPrank();
         }
 
         assertEq(bridgeBank.depositNonce(), numDeposits);
-        assertApproxEqRel(
-            bridgeBank.totalVaultAssets(),
-            totalDeposited,
-            0.001e18
-        );
+        assertApproxEqRel(bridgeBank.totalVaultAssets(), totalDeposited, 0.001e18);
     }
 
     /*//////////////////////////////////////////////////////////////
                           YIELD FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_YieldDoesNotReduceAssets(
-        uint256 depositAmount,
-        uint256 yieldAmount
-    ) public {
+    function testFuzz_YieldDoesNotReduceAssets(uint256 depositAmount, uint256 yieldAmount) public {
         // Bound inputs
         depositAmount = bound(depositAmount, MIN_DEPOSIT, MAX_DEPOSIT);
         yieldAmount = bound(yieldAmount, 0, depositAmount); // Yield up to 100%
@@ -136,11 +122,8 @@ contract BridgeFuzzTest is Test {
         usdc.mint(USER, depositAmount);
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), depositAmount);
-        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: address(0x999),
-            amount: depositAmount,
-            destinationChainId: 137
-        });
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: address(0x999), amount: depositAmount, destinationChainId: 137});
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
 
@@ -165,11 +148,8 @@ contract BridgeFuzzTest is Test {
         usdc.mint(USER, amount);
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), amount);
-        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: address(0x999),
-            amount: amount,
-            destinationChainId: 137
-        });
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: address(0x999), amount: amount, destinationChainId: 137});
         bridgeBank.deposit(params);
         vm.stopPrank();
 
@@ -185,11 +165,7 @@ contract BridgeFuzzTest is Test {
                           MINT FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_Mint(
-        uint256 amount,
-        uint256 nonce,
-        uint256 deadline
-    ) public {
+    function testFuzz_Mint(uint256 amount, uint256 nonce, uint256 deadline) public {
         // Bound inputs
         amount = bound(amount, MIN_DEPOSIT, MAX_DEPOSIT);
         nonce = bound(nonce, 1, type(uint128).max);
@@ -208,10 +184,7 @@ contract BridgeFuzzTest is Test {
         });
 
         // Sign
-        bytes32 digest = SignatureUtils.getTypedDataHash(
-            destDomainSeparator,
-            message
-        );
+        bytes32 digest = SignatureUtils.getTypedDataHash(destDomainSeparator, message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(RELAYER_PK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -237,10 +210,7 @@ contract BridgeFuzzTest is Test {
             deadline: block.timestamp + 1 hours
         });
 
-        bytes32 digest = SignatureUtils.getTypedDataHash(
-            destDomainSeparator,
-            message
-        );
+        bytes32 digest = SignatureUtils.getTypedDataHash(destDomainSeparator, message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(RELAYER_PK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -248,9 +218,7 @@ contract BridgeFuzzTest is Test {
         destBridge.mint(message, signature);
 
         // Second mint fails
-        vm.expectRevert(
-            abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
-        );
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce));
         destBridge.mint(message, signature);
     }
 
@@ -267,11 +235,8 @@ contract BridgeFuzzTest is Test {
         usdc.mint(USER, depositAmount);
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), depositAmount);
-        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: address(0x999),
-            amount: depositAmount,
-            destinationChainId: 137
-        });
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: address(0x999), amount: depositAmount, destinationChainId: 137});
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
 

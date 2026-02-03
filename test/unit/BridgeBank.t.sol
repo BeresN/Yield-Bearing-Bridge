@@ -35,6 +35,9 @@ contract BridgeBankTest is Test {
         // Deploy BridgeBank
         bridgeBank = new BridgeBank(address(vault), OWNER);
 
+        // Add destination chain (required for deposits)
+        bridgeBank.addChain(DESTINATION_CHAIN_ID, address(0xDEAD));
+
         vm.stopPrank();
 
         // Fund user with USDC
@@ -58,20 +61,11 @@ contract BridgeBankTest is Test {
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
 
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
 
         vm.expectEmit(true, true, true, true);
-        emit BridgeTypes.Deposited(
-            USER,
-            RECIPIENT,
-            DEPOSIT_AMOUNT,
-            DEPOSIT_AMOUNT,
-            1,
-            DESTINATION_CHAIN_ID
-        );
+        emit BridgeTypes.Deposited(USER, RECIPIENT, DEPOSIT_AMOUNT, DEPOSIT_AMOUNT, 1, DESTINATION_CHAIN_ID);
 
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -86,9 +80,7 @@ contract BridgeBankTest is Test {
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
 
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
 
         uint256 nonce = bridgeBank.deposit(params);
@@ -103,10 +95,7 @@ contract BridgeBankTest is Test {
         assertEq(record.nonce, nonce);
         assertEq(record.sourceChainId, block.chainid);
         assertEq(record.destinationChainId, DESTINATION_CHAIN_ID);
-        assertEq(
-            uint8(record.status),
-            uint8(BridgeTypes.DepositStatus.Pending)
-        );
+        assertEq(uint8(record.status), uint8(BridgeTypes.DepositStatus.Pending));
     }
 
     function test_MultipleDeposits() public {
@@ -114,9 +103,7 @@ contract BridgeBankTest is Test {
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT * 3);
 
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
 
         uint256 nonce1 = bridgeBank.deposit(params);
@@ -133,11 +120,8 @@ contract BridgeBankTest is Test {
     function test_RevertWhen_ZeroAmount() public {
         vm.startPrank(USER);
 
-        BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: 0,
-            destinationChainId: DESTINATION_CHAIN_ID
-        });
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: RECIPIENT, amount: 0, destinationChainId: DESTINATION_CHAIN_ID});
 
         vm.expectRevert(BridgeTypes.ZeroAmount.selector);
         bridgeBank.deposit(params);
@@ -149,9 +133,7 @@ contract BridgeBankTest is Test {
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
 
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: address(0),
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: address(0), amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
 
         vm.expectRevert(BridgeTypes.ZeroAddress.selector);
@@ -167,9 +149,7 @@ contract BridgeBankTest is Test {
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
 
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
 
         vm.expectRevert();
@@ -186,9 +166,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -202,10 +180,7 @@ contract BridgeBankTest is Test {
         assertEq(usdc.balanceOf(USER), userBalanceBefore + DEPOSIT_AMOUNT);
 
         BridgeTypes.DepositRecord memory record = bridgeBank.getDeposit(nonce);
-        assertEq(
-            uint8(record.status),
-            uint8(BridgeTypes.DepositStatus.Refunded)
-        );
+        assertEq(uint8(record.status), uint8(BridgeTypes.DepositStatus.Refunded));
     }
 
     function test_RefundWithYield() public {
@@ -213,9 +188,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -240,9 +213,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -258,9 +229,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -271,9 +240,7 @@ contract BridgeBankTest is Test {
 
         // Try to refund completed deposit
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
-        );
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce));
         bridgeBank.refund(nonce, 0);
     }
 
@@ -282,9 +249,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -295,9 +260,7 @@ contract BridgeBankTest is Test {
 
         // Try to refund again
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce)
-        );
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.NonceAlreadyUsed.selector, nonce));
         bridgeBank.refund(nonce, 0);
     }
 
@@ -306,9 +269,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -329,9 +290,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -341,10 +300,7 @@ contract BridgeBankTest is Test {
         bridgeBank.markCompleted(nonce);
 
         BridgeTypes.DepositRecord memory record = bridgeBank.getDeposit(nonce);
-        assertEq(
-            uint8(record.status),
-            uint8(BridgeTypes.DepositStatus.Completed)
-        );
+        assertEq(uint8(record.status), uint8(BridgeTypes.DepositStatus.Completed));
     }
 
     function test_RevertWhen_MarkCompletedNonOwner() public {
@@ -352,9 +308,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -373,9 +327,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -395,9 +347,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         bridgeBank.deposit(params);
         vm.stopPrank();
@@ -409,9 +359,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         bridgeBank.deposit(params);
         vm.stopPrank();
@@ -431,9 +379,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         vm.expectRevert();
         bridgeBank.deposit(params);
@@ -451,9 +397,7 @@ contract BridgeBankTest is Test {
         vm.startPrank(USER);
         usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
         BridgeTypes.DepositParams memory params = BridgeTypes.DepositParams({
-            recipient: RECIPIENT,
-            amount: DEPOSIT_AMOUNT,
-            destinationChainId: DESTINATION_CHAIN_ID
+            recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: DESTINATION_CHAIN_ID
         });
         uint256 nonce = bridgeBank.deposit(params);
         vm.stopPrank();
@@ -474,5 +418,73 @@ contract BridgeBankTest is Test {
         vm.prank(USER);
         vm.expectRevert();
         bridgeBank.unpause();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CHAIN REGISTRY TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_AddChain() public {
+        uint256 newChainId = 42161; // Arbitrum mainnet
+        address newRemote = address(0x1234);
+
+        vm.prank(OWNER);
+        bridgeBank.addChain(newChainId, newRemote);
+
+        assertTrue(bridgeBank.isChainSupported(newChainId));
+        assertEq(bridgeBank.getRemoteContract(newChainId), newRemote);
+    }
+
+    function test_RemoveChain() public {
+        vm.prank(OWNER);
+        bridgeBank.removeChain(DESTINATION_CHAIN_ID);
+
+        assertFalse(bridgeBank.isChainSupported(DESTINATION_CHAIN_ID));
+    }
+
+    function test_RevertWhen_AddChainZeroAddress() public {
+        vm.prank(OWNER);
+        vm.expectRevert(BridgeTypes.ZeroAddress.selector);
+        bridgeBank.addChain(999, address(0));
+    }
+
+    function test_RevertWhen_AddChainNonOwner() public {
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeBank.addChain(999, address(0x1234));
+    }
+
+    function test_RevertWhen_RemoveChainNonOwner() public {
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeBank.removeChain(DESTINATION_CHAIN_ID);
+    }
+
+    function test_RevertWhen_RemoveUnsupportedChain() public {
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.ChainNotSupported.selector, 999));
+        bridgeBank.removeChain(999);
+    }
+
+    function test_RevertWhen_DepositToUnsupportedChain() public {
+        vm.startPrank(USER);
+        usdc.approve(address(bridgeBank), DEPOSIT_AMOUNT);
+
+        BridgeTypes.DepositParams memory params =
+            BridgeTypes.DepositParams({recipient: RECIPIENT, amount: DEPOSIT_AMOUNT, destinationChainId: 999});
+
+        vm.expectRevert(abi.encodeWithSelector(BridgeTypes.ChainNotSupported.selector, 999));
+        bridgeBank.deposit(params);
+        vm.stopPrank();
+    }
+
+    function test_IsChainSupported() public view {
+        assertTrue(bridgeBank.isChainSupported(DESTINATION_CHAIN_ID));
+        assertFalse(bridgeBank.isChainSupported(999));
+    }
+
+    function test_GetRemoteContract() public view {
+        assertEq(bridgeBank.getRemoteContract(DESTINATION_CHAIN_ID), address(0xDEAD));
+        assertEq(bridgeBank.getRemoteContract(999), address(0));
     }
 }

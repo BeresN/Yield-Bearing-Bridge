@@ -20,17 +20,23 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
 
     uint256 public depositNonce;
     mapping(uint256 => BridgeTypes.DepositRecord) public deposits;
+    mapping(uint256 chainId => BridgeTypes.ChainConfig) public supportedChains;
 
-    constructor(
-        address vault_,
-        address owner_
-    ) VaultAdapter(vault_) Ownable(owner_) {}
+    event ChainAdded(uint256 indexed chainId, address remoteContract);
+    event ChainRemoved(uint256 indexed chainId);
 
-    function deposit(
-        BridgeTypes.DepositParams calldata params
-    ) external whenNotPaused returns (uint256 nonce) {
+    constructor(address vault_, address owner_) VaultAdapter(vault_) Ownable(owner_) {}
+
+    /*//////////////////////////////////////////////////////////////
+                          BRIDGE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function deposit(BridgeTypes.DepositParams calldata params) external whenNotPaused returns (uint256 nonce) {
         if (params.recipient == address(0)) revert BridgeTypes.ZeroAddress();
         if (params.amount == 0) revert BridgeTypes.ZeroAmount();
+        if (!supportedChains[params.destinationChainId].enabled) {
+            revert BridgeTypes.ChainNotSupported(params.destinationChainId);
+        }
 
         depositToken.safeTransferFrom(msg.sender, address(this), params.amount);
 
@@ -50,12 +56,7 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
         });
 
         emit BridgeTypes.Deposited(
-            msg.sender,
-            params.recipient,
-            params.amount,
-            shares,
-            nonce,
-            params.destinationChainId
+            msg.sender, params.recipient, params.amount, shares, nonce, params.destinationChainId
         );
     }
 
@@ -85,9 +86,7 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
         record.status = BridgeTypes.DepositStatus.Completed;
     }
 
-    function getDeposit(
-        uint256 nonce
-    ) external view returns (BridgeTypes.DepositRecord memory) {
+    function getDeposit(uint256 nonce) external view returns (BridgeTypes.DepositRecord memory) {
         return deposits[nonce];
     }
 
@@ -98,6 +97,28 @@ contract BridgeBank is VaultAdapter, Ownable, Pausable {
     /*//////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    function addChain(uint256 chainId, address remoteContract) external onlyOwner {
+        if (remoteContract == address(0)) revert BridgeTypes.ZeroAddress();
+        supportedChains[chainId] = BridgeTypes.ChainConfig({remoteContract: remoteContract, enabled: true});
+        emit ChainAdded(chainId, remoteContract);
+    }
+
+    function removeChain(uint256 chainId) external onlyOwner {
+        if (!supportedChains[chainId].enabled) {
+            revert BridgeTypes.ChainNotSupported(chainId);
+        }
+        supportedChains[chainId].enabled = false;
+        emit ChainRemoved(chainId);
+    }
+
+    function isChainSupported(uint256 chainId) external view returns (bool) {
+        return supportedChains[chainId].enabled;
+    }
+
+    function getRemoteContract(uint256 chainId) external view returns (address) {
+        return supportedChains[chainId].remoteContract;
+    }
 
     function pause() external onlyOwner {
         _pause();

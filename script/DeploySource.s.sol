@@ -7,12 +7,8 @@ import {MockERC4626} from "../src/mocks/MockERC4626.sol";
 import {BridgeBank} from "../src/source/BridgeBank.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-/**
- * @notice Deploys source chain contracts to Sepolia testnet
- */
 contract DeploySource is Script {
     function run() external {
-        // Read deployer from environment variable (most reliable with --account)
         address deployer = vm.envAddress("DEPLOYER_ADDRESS");
 
         console.log("Deploying Source Chain contracts...");
@@ -21,21 +17,20 @@ contract DeploySource is Script {
 
         vm.startBroadcast();
 
-        // 1. Deploy Mock USDC
         MockERC20 usdc = new MockERC20("Mock USDC", "USDC");
         console.log("MockUSDC deployed at:", address(usdc));
 
-        // 2. Deploy Mock ERC4626 Vault
         MockERC4626 vault = new MockERC4626(ERC20(address(usdc)), "Vault USDC", "vUSDC");
         console.log("MockERC4626 Vault deployed at:", address(vault));
 
-        // 3. Deploy BridgeBank (owner = deployer)
         BridgeBank bridgeBank = new BridgeBank(address(vault), deployer);
         console.log("BridgeBank deployed at:", address(bridgeBank));
 
+        bridgeBank.addChain(421614, address(0xDEAD));
+        console.log("Added Arbitrum Sepolia (421614) as destination chain");
+
         vm.stopBroadcast();
 
-        // Print summary
         console.log("\n=== DEPLOYMENT SUMMARY (SOURCE CHAIN - SEPOLIA) ===");
         console.log("MockUSDC:    ", address(usdc));
         console.log("Vault:       ", address(vault));
