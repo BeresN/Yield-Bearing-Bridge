@@ -12,8 +12,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
  */
 contract DeploySource is Script {
     function run() external {
-        // Get deployer address from the account provided via --account flag
-        address deployer = msg.sender;
+        // Read deployer from environment variable (most reliable with --account)
+        address deployer = vm.envAddress("DEPLOYER_ADDRESS");
 
         console.log("Deploying Source Chain contracts...");
         console.log("Deployer:", deployer);

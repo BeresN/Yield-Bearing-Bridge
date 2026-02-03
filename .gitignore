@@ -12,4 +12,12 @@ helpers.txt
 
 # Dotenv file
 .env
+
+# Logs
+*.log
+
+# Relayer
+relayer/node_modules/
+relayer/dist/
+
 Planning.md

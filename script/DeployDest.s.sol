@@ -10,11 +10,8 @@ import {DestBridge} from "../src/destination/DestBridge.sol";
  */
 contract DeployDest is Script {
     function run() external {
-        address deployer = msg.sender;
-
-        // The relayer address - this is the account that will sign bridge messages
-        // For testing, using the same deployer. In production, use a separate key.
-        address relayer = vm.envOr("RELAYER_ADDRESS", deployer);
+        address deployer = vm.envAddress("DEPLOYER_ADDRESS");
+        address relayer = deployer;
 
         console.log("Deploying Destination Chain contracts...");
         console.log("Deployer:", deployer);
