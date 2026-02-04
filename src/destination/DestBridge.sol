@@ -8,7 +8,6 @@ import {BridgeTypes} from "../libraries/BridgeTypes.sol";
 import {SignatureUtils} from "../libraries/SignatureUtils.sol";
 
 /**
- * @title DestBridge
  * @notice Destination chain bridge - verifies relayer signatures and mints bridged tokens
  * @dev Uses EIP-712 typed data for signature verification with replay protection.
  *      Supports multiple source chains via registry pattern.
@@ -24,18 +23,10 @@ contract DestBridge is Ownable, Pausable {
     mapping(uint256 => bool) public usedNonces;
     mapping(uint256 sourceChainId => BridgeTypes.SourceChainConfig) public sourceChains;
 
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-
     event RelayerUpdated(address indexed oldRelayer, address indexed newRelayer);
     event TokensMinted(address indexed recipient, uint256 amount, uint256 indexed nonce, uint256 sourceChainId);
     event SourceChainAdded(uint256 indexed chainId, address token, address bridgeContract);
     event SourceChainRemoved(uint256 indexed chainId);
-
-    /*//////////////////////////////////////////////////////////////
-                              CONSTRUCTOR
-    //////////////////////////////////////////////////////////////*/
 
     constructor(address relayer_, address owner_) Ownable(owner_) {
         if (relayer_ == address(0)) revert BridgeTypes.ZeroAddress();
@@ -48,7 +39,6 @@ contract DestBridge is Ownable, Pausable {
                           BRIDGE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Mints bridged tokens after verifying relayer signature
     function mint(BridgeTypes.BridgeMessage calldata message, bytes calldata signature) external whenNotPaused {
         if (message.destinationChainId != block.chainid) {
             revert BridgeTypes.InvalidChainId(block.chainid, message.destinationChainId);

@@ -7,7 +7,7 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 /// @notice A mock USDC token for testnet simulation with a public faucet
 /// @dev Implements ERC20 with permit extension for gasless approvals
 contract MockERC20 is ERC20, ERC20Permit {
-    uint256 public constant FAUCET_AMOUNT = 1000e6; // 1000 USDC (6 decimals)
+    uint256 public constant FAUCET_AMOUNT = 1000e6;
     uint256 public constant FAUCET_COOLDOWN = 1 hours;
 
     mapping(address => uint256) public lastFaucetClaim;
